@@ -11,7 +11,7 @@ public class Goods {
 	
 	float lifetime = 0;
 	
-	public static final float velBase = 2;
+	public static final float velBase = 4;
 
 	public Goods(float posX, float posY, float velX, float velY, float lifetime, Node nodeOrigin, Node nodeDestination) {
 		this.posX = posX;
@@ -21,6 +21,16 @@ public class Goods {
 		this.lifetime = lifetime;
 		this.nodeOrigin = nodeOrigin;
 		this.nodeDestination = nodeDestination;
+	}
+	
+	public void render(float delta) {
+		
+	}
+	
+	public void update(float delta) {
+		posX += velX*delta;
+		posY += velY*delta;
+		lifetime -= delta;
 	}
 
 }

@@ -1,6 +1,7 @@
 package com.pauson.recurrence.screens;
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 public class Plot {
 	
@@ -27,6 +28,19 @@ public class Plot {
 		this.height = height;
 		this.type = type;
 		this.color = color;
+	}
+	
+	public void render(ShapeRenderer shapeRenderer) {
+		if (type.equals(Type.WATER)) {
+			shapeRenderer.setColor(color);
+		} else if (type.equals(Type.GRASS)) {
+			shapeRenderer.setColor(color);
+		} else if (type.equals(Type.FOREST)) {
+			shapeRenderer.setColor(color);
+		} else if (type.equals(Type.ROCK)) {
+			shapeRenderer.setColor(color);
+		} 
+		shapeRenderer.rect(posX*GameScreen.width, posY*GameScreen.height, GameScreen.width, GameScreen.height);
 	}
 
 }

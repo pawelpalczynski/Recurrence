@@ -25,12 +25,12 @@ public class GameScreen implements Screen {
 	
 	Random random = new Random();
 	
-	int screenX = 1280;
-	int screenY = 800;
-	int sizeX = 108;
-	int sizeY = 80;
-	float width = screenX/(sizeX + 20);
-	float height = screenY/sizeY;
+	static final int screenX = 1280;
+	static final int screenY = 800;
+	static final int sizeX = 108;
+	static final int sizeY = 80;
+	static final float width = screenX/(sizeX + 20);
+	static final float height = screenY/sizeY;
 	
 	float[][] heightMap;
 	
@@ -41,8 +41,10 @@ public class GameScreen implements Screen {
 	int score = 2;
 	BitmapFont font = new BitmapFont();
 	
-	int nodesLimit = 5;
+	int nodesLimit = 20;
+	int nodesCount = 0;
 	ArrayList<Node> nodes = new ArrayList<Node>();
+	ArrayList<Node> nodesToRemove = new ArrayList<Node>();
 	
 	ArrayList<Goods> goods = new ArrayList<Goods>();
 	ArrayList<Goods> goodsToRemove = new ArrayList<Goods>();
@@ -54,6 +56,16 @@ public class GameScreen implements Screen {
 	int mousePosX = 0;
 	int mousePosY = 0;
 	boolean mouseOnScreen = false;
+	
+	ArrayList<Button> buttons = new ArrayList<Button>();
+	Button addNode = new Button(screenX - width*18, screenY - 400, 150, 30, "Add node");
+	Button removeNode = new Button(screenX - width*18, screenY - 440, 150, 30, "Remove node");
+	Button addConnection = new Button(screenX - width*18, screenY - 480, 150, 30, "Add connection");
+	Button removeConnection = new Button(screenX - width*18, screenY - 520, 150, 30, "Remove connection");
+	
+	int activeButton = 0;
+	boolean nodeIsSelected = false;
+	Node nodeSelected;
 
 	public GameScreen(Recurrence game) {
 		this.game = game;
@@ -70,41 +82,19 @@ public class GameScreen implements Screen {
 		shapeRenderer.setProjectionMatrix(camera.combined);
 		
 		// Plots render
+		// need to begin shape renderer before loop, otherwise fps drops
 		shapeRenderer.begin(ShapeType.Filled);
 		for (int i = 0; i<sizeX; i++) {
 			for (int j = 0; j<sizeY; j++) {
-				if (plotMap[i][j].type.equals(Type.WATER)) {
-					shapeRenderer.setColor(plotMap[i][j].color);
-				} else if (plotMap[i][j].type.equals(Type.GRASS)) {
-					shapeRenderer.setColor(plotMap[i][j].color);
-				} else if (plotMap[i][j].type.equals(Type.FOREST)) {
-					shapeRenderer.setColor(plotMap[i][j].color);
-				} else if (plotMap[i][j].type.equals(Type.ROCK)) {
-					shapeRenderer.setColor(plotMap[i][j].color);
-				} 
-				 shapeRenderer.rect(i*width, j*height, width, height);
+				plotMap[i][j].render(shapeRenderer);
 			}
 		}
 		shapeRenderer.end();
 		
 		// Nodes render
-		shapeRenderer.begin(ShapeType.Filled);
-		shapeRenderer.setColor(Color.MAROON);
 		for (int i = 0; i < nodes.size(); i++) {
-			shapeRenderer.rect(nodes.get(i).posX*width, nodes.get(i).posY*height, width, height);
+			nodes.get(i).render(shapeRenderer);
 		}
-		shapeRenderer.end();
-		
-		// Connection render
-		shapeRenderer.begin(ShapeType.Line);
-		shapeRenderer.setColor(Color.NAVY);
-		for (int i = 0; i < nodes.size(); i++) {
-			for (int j = 0; j < nodes.get(i).connectedNodes.size(); j++) {
-				shapeRenderer.line(	nodes.get(i).posX*width + width/2, nodes.get(i).posY*height + height/2, 
-									nodes.get(i).connectedNodes.get(j).posX*width + width/2, nodes.get(i).connectedNodes.get(j).posY*height + height/2);
-			}
-		}
-		shapeRenderer.end();
 		
 		// Goods render
 		shapeRenderer.begin(ShapeType.Filled);
@@ -117,6 +107,7 @@ public class GameScreen implements Screen {
 		
 		// GUI render
 		batch.begin();
+		font.setColor(Color.WHITE);
 		font.draw(batch, "Score: " + score, 50, screenY - 30);
 		if (mouseOnScreen) {
 			font.draw(batch, "Plot: " + plotMap[mousePosX][mousePosY].type, screenX - 18*width, screenY - 20);
@@ -133,44 +124,35 @@ public class GameScreen implements Screen {
 			}
 			
 		}
+		
+		font.draw(batch, "Nodes: " + nodesCount, 200, screenY - 50);
 		batch.end();
 		
+		for (int i = 0; i<buttons.size(); i++){
+			buttons.get(i).render(delta, shapeRenderer, batch, font);
+		}
 		
 		update(delta);
 	}
 	
 	public void update(float delta) {
 		// Goods generation
-		for (int i = 0; i < nodes.size(); i++) {
-			nodes.get(i).timer += delta;
-			if (nodes.get(i).timer > 1) {
-				nodes.get(i).timer--;
-				if (nodes.get(i).connectedNodes.size() != 0) {
-					for (int j = 0; j < nodes.get(i).connectedNodes.size(); j++) {
-						float distance = (float) Math.sqrt((nodes.get(i).connectedNodes.get(j).posX - nodes.get(i).posX)*(nodes.get(i).connectedNodes.get(j).posX - nodes.get(i).posX) + (nodes.get(i).connectedNodes.get(j).posY - nodes.get(i).posY)*(nodes.get(i).connectedNodes.get(j).posY - nodes.get(i).posY));
-						float velX = (nodes.get(i).connectedNodes.get(j).posX - nodes.get(i).posX)*Goods.velBase*score/distance;
-						float velY = (nodes.get(i).connectedNodes.get(j).posY - nodes.get(i).posY)*Goods.velBase*score/distance;
-						float lifetime = distance/(Goods.velBase*score);
-						goods.add(new Goods(nodes.get(i).posX + 0.5f, nodes.get(i).posY + 0.5f, velX, velY, lifetime, nodes.get(i), nodes.get(i).connectedNodes.get(j)));
-					}
-				}
-			}
+		for (int i = 0; i < nodes.size(); i++){
+			goods.addAll(nodes.get(i).update(delta));
 		}
 		
-		// Goods position update
-		if (goods.size() != 0) {
-			for (int i = 0; i < goods.size(); i++) {
-				goods.get(i).posX += goods.get(i).velX*delta;
-				goods.get(i).posY += goods.get(i).velY*delta;
-				goods.get(i).lifetime -= delta;
-				if (goods.get(i).lifetime < 0) {
-					goodsToRemove.add(goods.get(i));
-				}
+		// Goods update
+		for (int i = 0; i < goods.size(); i++) {
+			goods.get(i).update(delta);
+			if (goods.get(i).lifetime < 0) {
+				goodsToRemove.add(goods.get(i));
 			}
 		}
 		
 		goods.removeAll(goodsToRemove);
+		goodsToRemove.clear();
 		
+		// Converting mouse position into grid coordinates
 		mousePosX = Gdx.input.getX() * (sizeX + 20) / screenX;
 		if (mousePosX >= 108) { 
 			mouseOnScreen = false;
@@ -178,6 +160,61 @@ public class GameScreen implements Screen {
 			mouseOnScreen = true;
 		}
 		mousePosY = sizeY - Gdx.input.getY() * (sizeY) / screenY - 1;
+		
+		
+		if (Gdx.input.isButtonPressed(0) && !mouseOnScreen){
+			for (int i = 0; i<buttons.size(); i++) {
+				if(buttons.get(i).isClicked(Gdx.input.getX(), screenY - Gdx.input.getY(), buttons)) { 
+					activeButton = i + 1;
+				}
+			}
+		} else if (Gdx.input.isButtonPressed(1) && !mouseOnScreen){
+			for (int i = 0; i<buttons.size(); i++) {
+				buttons.get(i).active = false;
+			}
+			activeButton = 0;
+		}
+		
+		// UI - abilities
+		if (mouseOnScreen && Gdx.input.isButtonPressed(0)) {
+			switch (activeButton){
+			case 1: boolean isEmpty = true;
+					for (int i = 0; i < nodes.size(); i++){
+						if (nodes.get(i).posX == mousePosX && nodes.get(i).posY == mousePosY){
+							isEmpty = false;
+						}
+					}
+					if (isEmpty && nodesCount < nodesLimit){
+						nodes.add(new Node(mousePosX, mousePosY));
+					}
+					break;
+			case 2: for (int i = 0; i<nodes.size(); i++){
+						if(nodes.get(i).posX == mousePosX && nodes.get(i).posY == mousePosY){
+							nodesToRemove.add(nodes.get(i));
+						}
+					}
+					nodes.removeAll(nodesToRemove);
+					nodesToRemove.clear();
+					break;
+			case 3: for (int i = 0; i < nodes.size(); i++)	{
+						if(nodes.get(i).posX == mousePosX && nodes.get(i).posY == mousePosY){
+							if(!nodeIsSelected){
+								nodeIsSelected = true;
+								nodeSelected = nodes.get(i);
+							} else {
+								if ((nodeSelected.posX != mousePosX || nodeSelected.posY != mousePosY) && !nodeSelected.connectedNodes.contains(nodes.get(i)) && !nodes.get(i).connectedNodes.contains(nodeSelected)){
+									nodeIsSelected = false;
+									nodeSelected.addConnection(nodes.get(i));
+									nodes.get(i).addConnection(nodeSelected);
+								}
+							}
+						}
+					}
+			}
+		}
+		
+		// updating counter display
+		nodesCount = nodes.size();
 		
 	}	
 
@@ -237,6 +274,12 @@ public class GameScreen implements Screen {
 			nodes.get(n1).addConnection(nodes.get(n2));
 			nodes.get(n2).addConnection(nodes.get(n1));
 		}
+		
+		// Buttons
+		buttons.add(addNode);
+		buttons.add(removeNode);
+		buttons.add(addConnection);
+		buttons.add(removeConnection);
 	}
 
 	@Override
@@ -263,6 +306,7 @@ public class GameScreen implements Screen {
 		System.out.println(string);
 	}
 	
+	// Generating Perlin noise for the terrain
 	public float[][] GenerateWhiteNoise(int width, int height){
 	    float[][] noise = new float[width][height];
 	 
