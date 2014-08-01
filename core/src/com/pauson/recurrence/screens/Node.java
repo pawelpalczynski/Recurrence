@@ -31,6 +31,10 @@ public class Node {
 	public void render(ShapeRenderer shapeRenderer){
 		// Node render
 		shapeRenderer.begin(ShapeType.Filled);
+		if (selected) {
+			shapeRenderer.setColor(Color.GREEN);
+			shapeRenderer.rect((posX - 0.25f)*GameScreen.width, (posY - 0.25f)*GameScreen.height, GameScreen.width*1.5f, GameScreen.height*1.5f);
+		}
 		shapeRenderer.setColor(Color.MAROON);
 		shapeRenderer.rect(posX*GameScreen.width, posY*GameScreen.height, GameScreen.width, GameScreen.height);
 		shapeRenderer.end();

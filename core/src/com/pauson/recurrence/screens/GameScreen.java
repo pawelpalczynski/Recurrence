@@ -14,7 +14,6 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import com.pauson.recurrence.Recurrence;
-import com.pauson.recurrence.input.InputHandler;
 
 public class GameScreen implements Screen {
 
@@ -39,7 +38,7 @@ public class GameScreen implements Screen {
 	SpriteBatch batch;
 	
 	int score = 2;
-	BitmapFont font = new BitmapFont();
+	BitmapFont font = new BitmapFont(); // for writing stuff
 	
 	int nodesLimit = 20;
 	int nodesCount = 0;
@@ -49,7 +48,6 @@ public class GameScreen implements Screen {
 	ArrayList<Goods> goods = new ArrayList<Goods>();
 	ArrayList<Goods> goodsToRemove = new ArrayList<Goods>();
 	
-	float timer = 0;
 	int connectionLimit = 10;
 	int connectionCount = 0;
 	
@@ -65,8 +63,8 @@ public class GameScreen implements Screen {
 	
 	int activeButton = 0;
 	boolean nodeIsSelected = false;
-	Node nodeSelected;
-
+	Node nodeSelected = new Node(0, 0);
+	
 	public GameScreen(Recurrence game) {
 		this.game = game;
 	}
@@ -151,67 +149,6 @@ public class GameScreen implements Screen {
 		
 		goods.removeAll(goodsToRemove);
 		goodsToRemove.clear();
-		
-		// Converting mouse position into grid coordinates
-		mousePosX = Gdx.input.getX() * (sizeX + 20) / screenX;
-		if (mousePosX >= 108) { 
-			mouseOnScreen = false;
-		} else {
-			mouseOnScreen = true;
-		}
-		mousePosY = sizeY - Gdx.input.getY() * (sizeY) / screenY - 1;
-		
-		
-		if (Gdx.input.isButtonPressed(0) && !mouseOnScreen){
-			for (int i = 0; i<buttons.size(); i++) {
-				if(buttons.get(i).isClicked(Gdx.input.getX(), screenY - Gdx.input.getY(), buttons)) { 
-					activeButton = i + 1;
-				}
-			}
-		} else if (Gdx.input.isButtonPressed(1) && !mouseOnScreen){
-			for (int i = 0; i<buttons.size(); i++) {
-				buttons.get(i).active = false;
-			}
-			activeButton = 0;
-		}
-		
-		// UI - abilities
-		if (mouseOnScreen && Gdx.input.isButtonPressed(0)) {
-			switch (activeButton){
-			case 1: boolean isEmpty = true;
-					for (int i = 0; i < nodes.size(); i++){
-						if (nodes.get(i).posX == mousePosX && nodes.get(i).posY == mousePosY){
-							isEmpty = false;
-						}
-					}
-					if (isEmpty && nodesCount < nodesLimit){
-						nodes.add(new Node(mousePosX, mousePosY));
-					}
-					break;
-			case 2: for (int i = 0; i<nodes.size(); i++){
-						if(nodes.get(i).posX == mousePosX && nodes.get(i).posY == mousePosY){
-							nodesToRemove.add(nodes.get(i));
-						}
-					}
-					nodes.removeAll(nodesToRemove);
-					nodesToRemove.clear();
-					break;
-			case 3: for (int i = 0; i < nodes.size(); i++)	{
-						if(nodes.get(i).posX == mousePosX && nodes.get(i).posY == mousePosY){
-							if(!nodeIsSelected){
-								nodeIsSelected = true;
-								nodeSelected = nodes.get(i);
-							} else {
-								if ((nodeSelected.posX != mousePosX || nodeSelected.posY != mousePosY) && !nodeSelected.connectedNodes.contains(nodes.get(i)) && !nodes.get(i).connectedNodes.contains(nodeSelected)){
-									nodeIsSelected = false;
-									nodeSelected.addConnection(nodes.get(i));
-									nodes.get(i).addConnection(nodeSelected);
-								}
-							}
-						}
-					}
-			}
-		}
 		
 		// updating counter display
 		nodesCount = nodes.size();
